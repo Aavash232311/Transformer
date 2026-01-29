@@ -27,7 +27,7 @@ class MLP(nn.Module):
         self.p = 4
         self.net = nn.Sequential(
             nn.Linear(d_model, self.p * d_model),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(self.p*d_model, d_model)
         )
 
@@ -93,8 +93,52 @@ class MultiHead(nn.Module):
         return out
 
 
+class TransformerBlock(nn.Module):
+
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        self.attention = MultiHead(d_model, num_heads)
+        self.mlp = MLP(d_model)
+
+        self.norm1 = nn.LayerNorm(d_model) # normalzies each vector to have mean 0 and std dev 1, we might see problems like vanishing gradient
+        self.norm2 = nn.LayerNorm(d_model)
+
+    
+    def forward(self, x):
+        temp = x # we need to store the original
+        att_out = self.attention(x)
+        x = temp + att_out
+        x = self.norm1(x) # post norm
+
+        # again storing second temp
+        temp2 = x
+        mlp_out = self.mlp(x)
+        x = temp2 + mlp_out
+        x = self.norm2(x)
+        return x
+
+class StackTransfomer(nn.Module):
+
+    def __init__(self,  d_model, num_heads, num_layers=3):
+        super().__init__()
+
+        # now we need to stack the blocks
+        self.layers = nn.ModuleList([
+            TransformerBlock(d_model, num_heads)
+            for _ in range(num_layers)  # Creates N identical blocks
+        ])
+
+        self.final_norm = nn.LayerNorm(d_model) # normalizes output, the result that comes from being passed with n-blocks 
+
+    def forward(self, x):
+        for layer in self.layers: # passing through n-blocks
+            x = layer(x)
         
-class TransfomerBlock:
+        # final norm
+        x = self.final_norm(x)
+        return x
+        
+class Main:
 
     def __init__(self, batch_size, block_size, device, d_model):
         self.batch = GetBatch(train_data, batch_size, block_size)
@@ -127,18 +171,18 @@ class TransfomerBlock:
 
     def single_head(self):
         prompt = torch.tensor(tokenizer.encode("Alice"), dtype=torch.long, device=device).unsqueeze(0)
-        embedding = transfomer.forward(prompt)
+        embedding = self.forward(prompt)
 
-        # now we want to work in a single head of attention 
-        single_headed = MultiHead(self.d_model).to(self.device) # bringing to NVIDA gpu if avalible 
-        out = single_headed.forward(embedding)
+        block_t = StackTransfomer(
+            d_model=self.d_model,
+            num_heads=8
+        ).to(device=self.device)
+        res = block_t.forward(embedding)
+        print(res.shape)
 
-        mlp = MLP(self.d_model).to(device=self.device)
-        out_mlp = mlp.forward(out)
-        print(out_mlp.shape)
 
 
-transfomer = TransfomerBlock(batch_size=32, # for local hardware with 4GB GDDR6
+transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
         block_size=128,
         device=device,
         d_model=512)
