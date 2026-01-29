@@ -1,8 +1,8 @@
-
 import torch
 import torch.nn as nn
 from tokenizer import Tokenizer
 from batch import GetBatch
+from torch.utils.data import DataLoader, Dataset
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
@@ -17,9 +17,9 @@ tokenizer = Tokenizer(text)
 print(f"Dataset characters: {len(text)}")
 
 # Data Plumbing 
-split_data_index = int(len(text) * 0.1)
-train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch.long)
-test_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long)
+split_data_index = int(len(text) * 0.9) 
+train_data = torch.tensor(tokenizer.encode[:split_data_index], dtype=torch.long)      
+val_data = torch.tensor(tokenizer.encode[split_data_index:], dtype=torch.long)    
 
 class MLP(nn.Module):
     def __init__(self, d_model):
