@@ -21,7 +21,18 @@ split_data_index = int(len(text) * 0.1)
 train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch.long)
 test_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long)
 
+class MLP(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.p = 4
+        self.net = nn.Sequential(
+            nn.Linear(d_model, self.p * d_model),
+            nn.ReLU(),
+            nn.Linear(self.p*d_model, d_model)
+        )
 
+    def forward(self, x): # x = output from attention block
+        return self.net(x)
 
 
 class MultiHead(nn.Module):
@@ -81,8 +92,9 @@ class MultiHead(nn.Module):
         out = self.output_proj(out) # MultiHead(Q, K, V ) = Concat(head1, ..., headh)WO
         return out
 
+
         
-class Transfomer:
+class TransfomerBlock:
 
     def __init__(self, batch_size, block_size, device, d_model):
         self.batch = GetBatch(train_data, batch_size, block_size)
@@ -106,7 +118,8 @@ class Transfomer:
 
         pos = torch.arange(T, device=self.device)
   
-        positional_embedding_table = self.positional_embedding_table(pos)
+        positional_embedding_table = self.positional_embedding_table(pos).unsqueeze(0)
+
         # adding those up like in the original paper
         res = token_embedding_table + positional_embedding_table
         return res
@@ -118,10 +131,15 @@ class Transfomer:
 
         # now we want to work in a single head of attention 
         single_headed = MultiHead(self.d_model).to(self.device) # bringing to NVIDA gpu if avalible 
-        single_headed.forward(embedding)
+        out = single_headed.forward(embedding)
 
-transfomer = Transfomer(batch_size=4,
-        block_size=8,
+        mlp = MLP(self.d_model).to(device=self.device)
+        out_mlp = mlp.forward(out)
+        print(out_mlp.shape)
+
+
+transfomer = TransfomerBlock(batch_size=32, # for local hardware with 4GB GDDR6
+        block_size=128,
         device=device,
         d_model=512)
 transfomer.single_head()

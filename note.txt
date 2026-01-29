@@ -1,3 +1,5 @@
+The goal is to figure out and learn things!
+
 For forward pass
 
 Note:- forward()
@@ -114,3 +116,22 @@ Input (d_model=512)
 Output (d_model=512)
 
 Now the goal is to undersnad how does this thing work!
+
+Let's take a example of the word bank
+
+It can have a different meaning like river bank, bank angle, or money bank.
+
+In ReLu activation the thinking happens, 
+neuron get's activated if the model reconzies the pattern else not
+
+
+example why do we add the original vector after output
+
+# Original: ambiguous "bank"
+original = [0.5, 0.3, 0.4, 0.6, 0.2, ...]
+
+# After MLP: clarified "money bank"  
+mlp_output = [0.8, 0.1, 0.7, 0.9, ...]
+
+# Residual: original + mlp_output
+result = [1.3, 0.4, 1.1, 1.5, ...]  # Combined!
