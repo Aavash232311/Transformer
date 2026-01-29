@@ -72,3 +72,45 @@ Mask = [
 
 
 Next step Multi Headed Attention!
+Every head in the attention produces a change
+we sum together all the pruposed change, one for each head,
+and then add that to the original embeddings
+
+MultiHead(Q, K, V ) = Concat(head1, ..., headh)WO
+
+Again for the note:
+
+B,T,C = Batch size,
+ sequence length (number of token in each sequence),
+ Channel (size of vector)
+
+Input dimenstion is 512:
+-> we want to split those into 8 x 64 dim
+-> it's going to procress that head in parallel
+-> and the output of each head will be of 64 dimenstion
+-> The final output will be of the same size.
+
+
+# combining of multiple head that does the work in parallel and final output
+Head 1 slice: [1.0, 2.0, 3.0]  ← Dimensions 0-2
+Head 2 slice: [4.0, 5.0, 6.0]  ← Dimensions 3-5
+
+applying Wo, is a 6x6 matrix that learns to mix dimenstions
+Wᴼ = [[0.5, 0.2, 0.1, 0.0, 0.0, 0.0],   # Output dim 0 mostly from Head 1
+      [0.1, 0.5, 0.1, 0.1, 0.1, 0.1],   # Output dim 1 mix of both heads
+      [0.0, 0.0, 0.0, 0.5, 0.2, 0.1],   # Output dim 2 mostly from Head 2
+      [0.2, 0.2, 0.2, 0.2, 0.2, 0.2],   # Output dim 3 equal mix
+      [0.1, 0.2, 0.3, 0.1, 0.2, 0.3],   # Output dim 4 complex mix
+      [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]]   # Output dim 5 weighted toward Head 2
+
+
+
+
+Artitecture of MLP 
+Input (d_model=512)
+    ↓ Linear layer: 512 → 2048 (4× expansion)
+    ↓ ReLU activation (non-linearity)  
+    ↓ Linear layer: 2048 → 512 (back to original)
+Output (d_model=512)
+
+Now the goal is to undersnad how does this thing work!

@@ -22,19 +22,20 @@ train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch
 test_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long)
 
 
-class MultipleHead(nn.Module):
 
-    def __init__(self, n_head):
-        super().__init__()
-        self.n_head = n_head
 
-class SingleHeaded(nn.Module):
+class MultiHead(nn.Module):
 
-    def __init__(self, dim):
+    def __init__(self, dim, num_heads=8):
         super().__init__()
         self.key = nn.Linear(dim, dim) # it's learnable so using nn instead of matrix
         self.query = nn.Linear(dim, dim)
         self.value = nn.Linear(dim, dim)
+        self.num_heads = num_heads
+
+        self.head_dim = dim // num_heads # each head will have like dim // num_heads dimension
+
+        self.output_proj = nn.Linear(dim, dim)
     
     ''' Attention(Q, K, V) = softmax(QK^T / √d_k) V '''
     def forward(self, x):
@@ -43,22 +44,44 @@ class SingleHeaded(nn.Module):
         key = self.key(x)
         value = self.value(x)
 
-        # from the paper we need to calculate attention now
-        dk = query.size(-1)
-        # Query times transpose of key
-        # (B, C, T) instead of (B, T, C), new to torch keeping notes of small things
-        q_k_t = torch.matmul(query, key.transpose(-2, -1)) 
-        scores = q_k_t / torch.sqrt(torch.tensor(dk, dtype=torch.float32))
+        '''
+        Assuming input dimensions is 512
+        Let's say we want to split those into 8 heads then each head will have 64 dimensions.
+        It will procress all of those in parallel, each head output will be in 64 dimensions.
+        And the final output will be of 512 same dimension.
+        '''
 
-        # we need to do masking here before applying softmax
-        mask = torch.tril(torch.ones(T, T)).view(1, T, T).to(x.device)
-        scores = scores.masked_fill(mask == 0, -1e9)  # It's like a lower triangular matrix
+        # let's group these 512 numbers as 8 groups of 64.
+        query = query.view(B, T, self.num_heads, self.head_dim)
+        key = key.view(B, T, self.num_heads, self.head_dim)
+        value = value.view(B, T, self.num_heads, self.head_dim)
 
-        # finally apply softmax, dim=-1 probability distribution where each row sums to 1
-        res = torch.matmul(torch.softmax(scores, dim=-1), value)
-        print(res)
-        return res
+        # we might want to re-order dimension so that head can procress in parallel
+        # (Batch, Time, Heads, Features) -> (Batch, Heads, Time, Features) which let's torch procress all heads at once with matrix math
+        query = query.transpose(1, 2)
+        key = key.transpose(1, 2)
+        value = value.transpose(1, 2)
 
+        # now we can do the attention computation
+        # for a valid matrix mul (..., T, head_dim) @ (..., head_dim, T) = (..., T, T) so we need to swap the last two dims
+        s = torch.matmul(query, key.transpose(-2, -1))
+        s = s / torch.sqrt(torch.tensor(self.head_dim, dtype=torch.float32))
+
+        # we need masking to make the model learn authentically
+        mask = torch.tril(torch.ones(T, T)).view(1, 1, T, T).to(x.device)
+        s = s.masked_fill(mask==0, -1e9) # set it to -Inf
+
+        # now we can apply softmax
+        attn_wts = torch.softmax(s, dim=-1) # make sure everythings sums up to a disto of 1
+        out = torch.matmul(attn_wts, value)
+        # shape here is ex [1, 8, 5, 64]
+        # combine the heads back, contiguous() ensures data is stored sequently for the next view()
+        out = out.transpose(1, 2).contiguous() # new shape ]1, 5, 8, 64]
+        out = out.view(B, T, C) # here we reform our shape
+        out = self.output_proj(out) # MultiHead(Q, K, V ) = Concat(head1, ..., headh)WO
+        return out
+
+        
 class Transfomer:
 
     def __init__(self, batch_size, block_size, device, d_model):
@@ -94,7 +117,7 @@ class Transfomer:
         embedding = transfomer.forward(prompt)
 
         # now we want to work in a single head of attention 
-        single_headed = SingleHeaded(self.d_model).to(self.device) # bringing to NVIDA gpu if avalible 
+        single_headed = MultiHead(self.d_model).to(self.device) # bringing to NVIDA gpu if avalible 
         single_headed.forward(embedding)
 
 transfomer = Transfomer(batch_size=4,
