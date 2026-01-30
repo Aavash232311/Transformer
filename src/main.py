@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 from tokenizer import Tokenizer
-from batch import GetBatch
-from torch.utils.data import DataLoader, Dataset
+from batch import BatchLoader
+from torch.utils.data import Dataset, DataLoader
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
@@ -18,8 +18,8 @@ print(f"Dataset characters: {len(text)}")
 
 # Data Plumbing 
 split_data_index = int(len(text) * 0.9) 
-train_data = torch.tensor(tokenizer.encode[:split_data_index], dtype=torch.long)      
-val_data = torch.tensor(tokenizer.encode[split_data_index:], dtype=torch.long)    
+train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch.long)      
+val_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long)    
 
 class MLP(nn.Module):
     def __init__(self, d_model):
@@ -76,7 +76,7 @@ class MultiHead(nn.Module):
         # now we can do the attention computation
         # for a valid matrix mul (..., T, head_dim) @ (..., head_dim, T) = (..., T, T) so we need to swap the last two dims
         s = torch.matmul(query, key.transpose(-2, -1))
-        s = s / torch.sqrt(torch.tensor(self.head_dim, dtype=torch.float32))
+        s = s / torch.sqrt(torch.tensor(self.head_dim, dtype=torch.long))
 
         # we need masking to make the model learn authentically
         mask = torch.tril(torch.ones(T, T)).view(1, 1, T, T).to(x.device)
@@ -119,7 +119,7 @@ class TransformerBlock(nn.Module):
 
 class StackTransfomer(nn.Module):
 
-    def __init__(self,  d_model, num_heads, num_layers=3):
+    def __init__(self,  d_model, num_heads, num_layers=4):
         super().__init__()
 
         # now we need to stack the blocks
@@ -138,11 +138,11 @@ class StackTransfomer(nn.Module):
         x = self.final_norm(x)
         return x
         
-class Main:
+class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model):
-        self.batch = GetBatch(train_data, batch_size, block_size)
-        self.unique_characters = tokenizer.unique_characters()
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size):
+        super().__init__()
+        self.unique_characters = vocab_size
         self.batch_size = batch_size
         self.block_size = block_size
         self.device = device
@@ -150,13 +150,19 @@ class Main:
 
 
         self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device)
-        self.token_embedding_table = nn.Embedding(len(self.unique_characters), d_model, device=self.device)
+        self.token_embedding_table = nn.Embedding(self.unique_characters, d_model, device=self.device)
 
-    def mini_batch(self):
-        x, y = self.batch.mini_batch()
-        return x, y
+        self.block_transformer = StackTransfomer(
+            d_model = d_model,
+            num_heads=8
+        ).to(device=device) 
 
-    def forward(self, x):
+
+        self.lm_head = nn.Linear(d_model, vocab_size) 
+
+
+
+    def embedding(self, x):
         B, T = x.shape
         token_embedding_table = self.token_embedding_table(x) 
 
@@ -168,22 +174,81 @@ class Main:
         res = token_embedding_table + positional_embedding_table
         return res
     
+    def train(self, train_data, num_epochs=5):
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
 
-    def single_head(self):
-        prompt = torch.tensor(tokenizer.encode("Alice"), dtype=torch.long, device=device).unsqueeze(0)
-        embedding = self.forward(prompt)
+        dataset = BatchLoader(train_data, block_size=self.block_size)
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=True,           
+            num_workers=4, # 4 cpu core, in my current system hyperthreading is enabled so we could use 8, but there single core is stressed out
+            drop_last=True,
+            pin_memory=True # speeds the trasnfer of data from DDR RAM to NVIDA gpu
+        )
 
-        block_t = StackTransfomer(
-            d_model=self.d_model,
-            num_heads=8
-        ).to(device=self.device)
-        res = block_t.forward(embedding)
-        print(res.shape)
+        ''' In my case CPU might be a bottleneck,
+        NVIDA gpu handels math very fast, but it seems like the Sync is not so perfect.
 
+        If I try to increase number of heads then it will be out of memory due to lack of GDDR6 RAM
 
+        '''
+
+        print(f"Training for {num_epochs} epochs")
+        print(f"Batches per epoch: {len(dataloader)}")
+        print("-" * 60)
+
+        for epoch in range(num_epochs):
+            epoch_loss = 0
+            
+            print(f"\nEpoch {epoch+1}/{num_epochs}")
+            
+            # accounting for all batches
+            for batch_idx, (x, y) in enumerate(dataloader):
+                x, y = x.to(self.device), y.to(self.device) # bring to NVIDA gpu is avalible
+                
+                embeddings = self.embedding(x)
+                transformed = self.block_transformer(embeddings)
+                logits = self.lm_head(transformed)
+                
+                loss = torch.nn.functional.cross_entropy(
+                    logits.view(-1, self.unique_characters), 
+                    y.view(-1)
+                )
+                
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                
+                epoch_loss += loss.item()
+                
+                if batch_idx % 20 == 0:
+                    progress = (batch_idx + 1) / len(dataloader) * 100
+                    print(f"  Batch {batch_idx+1}/{len(dataloader)} ({progress:.1f}%): loss = {loss.item():.4f}")
+            
+            avg_loss = epoch_loss / len(dataloader)
+            print(f"epoch {epoch+1} complete! avg loss: {avg_loss:.4f}")
+        
+        print("training complete!")
+
+            
+    def run(self, data):
+        # prompt = torch.tensor(tokenizer.encode("Alice was beginning"), dtype=torch.long, device=device).unsqueeze(0)
+        # embedding = self.embedding(prompt)
+
+        # out =  self.block_transformer.forward(embedding)
+        # print(prompt.shape)
+        self.train(train_data=data)
+        return 
 
 transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
         block_size=128,
         device=device,
-        d_model=512)
-transfomer.single_head()
+        d_model=256,
+        vocab_size=len(tokenizer.unique_characters())).to(device=device)
+transfomer.run(train_data)
+
+
+total_params = sum(p.numel() for p in transfomer.parameters())
+print(f"Total paramaters: {total_params:,}")
+

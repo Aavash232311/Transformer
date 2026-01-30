@@ -140,3 +140,9 @@ why do add temp is that block, just for the note
 
 Without residual: x_new = f(x)     ← Must learn everything from scratch
 With residual:    x_new = x + f(x) ← Only needs to learn the "delta" (change)
+
+
+(.venv) avash@avash:~/Documents/Deep Learning$ python3 src/main.py 
+NVIDIA GeForce RTX 3050 Laptop GPU
+Dataset characters: 144599
+TOTAL PARAMETERS: 3,211,520
