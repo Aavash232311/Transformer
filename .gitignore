@@ -9,12 +9,6 @@ venv/
 ENV/
 env/
 
-# Data and Logs
-data/
-*.log
-*.pt
-*.pth
-*.ckpt
 
 # VS Code / IDEs
 .vscode/
