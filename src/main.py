@@ -280,6 +280,10 @@ class Main(nn.Module):
         all_predictions = torch.cat(all_predictions, dim=0)
         all_targets = torch.cat(all_targets, dim=0)
 
+        # for accuracy 
+        correct_mask = (all_predictions == all_predictions)
+        accuracy = correct_mask.float().mean().item()
+
         return average_loss, all_predictions, all_targets
             
     def run(self, data):
