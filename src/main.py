@@ -37,7 +37,7 @@ class MLP(nn.Module):
 
 class MultiHead(nn.Module):
 
-    def __init__(self, dim, num_heads=8):
+    def __init__(self, dim, num_heads=12):
         super().__init__()
         self.key = nn.Linear(dim, dim) # it's learnable so using nn instead of matrix
         self.query = nn.Linear(dim, dim)
@@ -293,9 +293,9 @@ class Main(nn.Module):
         print(f"avg loss: {average_loss} all predections: {all_predictions} all targets: {all_targets}")
 
 transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
-        block_size=128,
+        block_size=256,
         device=device,
-        d_model=256,
+        d_model=512,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
 transfomer.run(val_data)
 
