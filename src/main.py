@@ -284,7 +284,7 @@ class Main(nn.Module):
         correct_mask = (all_predictions == all_predictions)
         accuracy = correct_mask.float().mean().item()
 
-        return average_loss, all_predictions, all_targets
+        return average_loss, all_predictions, all_targets, accuracy
             
     def run(self, data):
         # prompt = torch.tensor(tokenizer.encode("Alice was beginning"), dtype=torch.long, device=device).unsqueeze(0)
@@ -293,8 +293,8 @@ class Main(nn.Module):
         # out =  self.block_transformer.forward(embedding)
         # print(prompt.shape)
         self.training_custom(train_data=data)
-        average_loss, all_predictions, all_targets = self.evaulate(data)
-        print(f"avg loss: {average_loss} all predections: {all_predictions} all targets: {all_targets}")
+        average_loss, all_predictions, all_targets, accuracy = self.evaulate(data)
+        print(f"avg loss: {average_loss} accuracy: {accuracy} all targets: {all_targets}")
 
 transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
         block_size=256,
