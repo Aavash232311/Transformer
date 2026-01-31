@@ -286,7 +286,7 @@ class Main(nn.Module):
 
         return average_loss, all_predictions, all_targets, accuracy
             
-    def run(self, data):
+    def run(self, train_data, val_data):
         # prompt = torch.tensor(tokenizer.encode("Alice was beginning"), dtype=torch.long, device=device).unsqueeze(0)
         # embedding = self.embedding(prompt)
 
@@ -294,8 +294,8 @@ class Main(nn.Module):
         # print(prompt.shape)
 
 
-        self.training_custom(train_data=data)
-        average_loss, all_predictions, all_targets, accuracy = self.evaulate(data)
+        self.training_custom(train_data=train_data)
+        average_loss, all_predictions, all_targets, accuracy = self.evaulate(val_data)
         print(f"avg loss: {average_loss} accuracy: {accuracy} ")
         return 
 
@@ -315,7 +315,7 @@ transfomer = Main(batch_size=32,
         device=device,
         d_model=512,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
-transfomer.run(val_data)
+transfomer.run(train_data=train_data, val_data=val_data)
 output = transfomer.prompt("Alice")
 print(tokenizer.decoder(output))
 
