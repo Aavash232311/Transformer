@@ -142,7 +142,28 @@ Without residual: x_new = f(x)     ← Must learn everything from scratch
 With residual:    x_new = x + f(x) ← Only needs to learn the "delta" (change)
 
 
-(.venv) avash@avash:~/Documents/Deep Learning$ python3 src/main.py 
-NVIDIA GeForce RTX 3050 Laptop GPU
-Dataset characters: 144599
-TOTAL PARAMETERS: 3,211,520
+
+# How does a model calculates loss in character level 
+
+let's say we have a vocab_size of 8
+vocab_size = {a,b,c,d,e,f,g,h}
+
+at each step model will output 8 probalities,
+let's say we expect the model to produce "abc"
+
+at start: (time 1)
+probalities = [0.2, 0.5, 0.1, 0.05, 0.05, 0.05, 0.03, 0.02]
+
+we want the first character to be 'a' the model confidence is 0.2
+so we have a loss
+
+given that the a is predicted in next character (time 2)
+
+p = [0.1, 0.6, ....]
+we have a loss, conidering the rest of the probalities is smaller than 0.6
+
+time(3) 
+p  = [0.05, 0.1, 0.7, ....]
+we have a loss again, considering the rest of the probalities is smaller than 0.7
+
+After that it will learn iteratively.

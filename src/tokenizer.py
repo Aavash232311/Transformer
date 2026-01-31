@@ -32,5 +32,3 @@ class Tokenizer:
     
     def unique_characters(self):
         return self.all_chars
-    
-    

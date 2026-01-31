@@ -174,7 +174,7 @@ class Main(nn.Module):
         res = token_embedding_table + positional_embedding_table
         return res
     
-    def train(self, train_data, num_epochs=5):
+    def training_custom(self, train_data, num_epochs=5):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
 
         dataset = BatchLoader(train_data, block_size=self.block_size)
@@ -208,6 +208,7 @@ class Main(nn.Module):
                 x, y = x.to(self.device), y.to(self.device) # bring to NVIDA gpu is avalible
                 
                 embeddings = self.embedding(x)
+
                 transformed = self.block_transformer(embeddings)
                 logits = self.lm_head(transformed)
                 
@@ -231,6 +232,55 @@ class Main(nn.Module):
         
         print("training complete!")
 
+    ''' Now we want to check how well hos our model done '''
+    def evaulate(self, test_data):
+        self.eval()
+        test_data = test_data.to(self.device)
+
+        total_loss = 0.0
+        total_samples = 0
+
+        # we need them ofc we do
+        all_predictions = []
+        all_targets = []
+
+        # we need x, and y for cross entropy loss
+        dataset = BatchLoader(test_data, block_size=self.block_size)
+        test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+        print("Evualating")
+        print(f"Total characters: {len(test_data)}")
+
+        with torch.no_grad(): # no gradient calculation in testing 
+            for batch_idx, (x, y) in enumerate(test_loader):
+                x, y = x.to(self.device), y.to(self.device)
+
+                x = self.embedding(x)
+                x = self.block_transformer(x) # this is the forward pass, passes through all the blocks
+                
+                logits = self.lm_head(x) 
+                
+                loss = torch.nn.functional.cross_entropy(
+                    logits.view(-1, self.unique_characters), 
+                    y.view(-1)
+                )
+
+                batch_size = x.size(0)
+                total_loss += loss.item() * batch_size # last batch might be smaller than the others
+                total_samples += batch_size
+                
+                # get predictions
+                predictions = torch.argmax(logits, dim=-1)
+
+                all_predictions.append(predictions.cpu())
+                all_targets.append(y.cpu())
+
+
+        average_loss = total_loss / total_samples if total_samples > 0 else 0
+
+        all_predictions = torch.cat(all_predictions, dim=0)
+        all_targets = torch.cat(all_targets, dim=0)
+
+        return average_loss, all_predictions, all_targets
             
     def run(self, data):
         # prompt = torch.tensor(tokenizer.encode("Alice was beginning"), dtype=torch.long, device=device).unsqueeze(0)
@@ -238,15 +288,16 @@ class Main(nn.Module):
 
         # out =  self.block_transformer.forward(embedding)
         # print(prompt.shape)
-        self.train(train_data=data)
-        return 
+        # self.training_custom(train_data=data)
+        average_loss, all_predictions, all_targets = self.evaulate(data)
+        print(f"avg loss: {average_loss} all predections: {all_predictions} all targets: {all_targets}")
 
 transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
         block_size=128,
         device=device,
         d_model=256,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
-transfomer.run(train_data)
+transfomer.run(val_data)
 
 
 total_params = sum(p.numel() for p in transfomer.parameters())
