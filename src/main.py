@@ -292,17 +292,32 @@ class Main(nn.Module):
 
         # out =  self.block_transformer.forward(embedding)
         # print(prompt.shape)
+
+
         self.training_custom(train_data=data)
         average_loss, all_predictions, all_targets, accuracy = self.evaulate(data)
         print(f"avg loss: {average_loss} accuracy: {accuracy} ")
+        return 
 
-transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
+    ''' Here we want to expriement with simple prompt '''
+    def prompt(self, prompt):
+        prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
+        embedding = self.embedding(prompt)
+        out =  self.block_transformer.forward(embedding)
+        logits = self.lm_head(out)
+
+        indices = torch.argmax(logits, dim=-1)
+        decoded_indices = indices[0].tolist()
+        return decoded_indices
+
+transfomer = Main(batch_size=32, 
         block_size=256,
         device=device,
         d_model=512,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
 transfomer.run(val_data)
-
+output = transfomer.prompt("Alice")
+print(tokenizer.decoder(output))
 
 total_params = sum(p.numel() for p in transfomer.parameters())
 print(f"Total paramaters: {total_params:,}")
