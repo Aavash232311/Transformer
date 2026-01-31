@@ -288,7 +288,7 @@ class Main(nn.Module):
 
         # out =  self.block_transformer.forward(embedding)
         # print(prompt.shape)
-        # self.training_custom(train_data=data)
+        self.training_custom(train_data=data)
         average_loss, all_predictions, all_targets = self.evaulate(data)
         print(f"avg loss: {average_loss} all predections: {all_predictions} all targets: {all_targets}")
 
