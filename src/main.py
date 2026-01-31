@@ -282,7 +282,7 @@ class Main(nn.Module):
 
         # for accuracy 
         correct_mask = (all_predictions == all_predictions)
-        accuracy = correct_mask.float().mean().item()
+        accuracy = correct_mask.float().mean().item() * 100
 
         return average_loss, all_predictions, all_targets, accuracy
             
@@ -294,7 +294,7 @@ class Main(nn.Module):
         # print(prompt.shape)
         self.training_custom(train_data=data)
         average_loss, all_predictions, all_targets, accuracy = self.evaulate(data)
-        print(f"avg loss: {average_loss} accuracy: {accuracy} all targets: {all_targets}")
+        print(f"avg loss: {average_loss} accuracy: {accuracy} ")
 
 transfomer = Main(batch_size=32, # for local hardware with 4GB GDDR6
         block_size=256,
