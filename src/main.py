@@ -142,7 +142,7 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=8):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
@@ -177,7 +177,7 @@ class Main(nn.Module):
         res = token_embedding_table + positional_embedding_table
         return res
     
-    def training_custom(self, train_data, num_epochs=5):
+    def training_custom(self, train_data, num_epochs=12):
         '''
         optimizer slightly pulls every weight toward zero with weight_decay
         cause our model just memorized in one point leading to high accuracy.
