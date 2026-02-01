@@ -140,13 +140,14 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=8):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
         self.block_size = block_size
         self.device = device
         self.d_model = d_model
+        self.generate_length = 8
 
 
         self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device)
@@ -305,14 +306,23 @@ class Main(nn.Module):
 
     ''' Here we want to expriement with simple prompt '''
     def prompt(self, prompt):
+        # this is the initial prompt!
         prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
-        embedding = self.embedding(prompt)
-        out =  self.block_transformer.forward(embedding)
-        logits = self.lm_head(out)
 
-        indices = torch.argmax(logits, dim=-1)
-        decoded_indices = indices[0].tolist()
-        return decoded_indices
+        for i in range(0, self.generate_length):
+            embedding = self.embedding(prompt)
+            out =  self.block_transformer.forward(embedding)
+            logits = self.lm_head(out)
+
+            indices = torch.argmax(logits, dim=-1)
+            decoded_indices = indices[0].tolist()
+
+            if i == 0: # replce that in first iteration
+                prompt = decoded_indices
+            else:
+                prompt += decoded_indices # we add the result
+
+        return prompt
 
 transfomer = Main(batch_size=120, 
         block_size=128,
