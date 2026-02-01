@@ -108,16 +108,15 @@ class TransformerBlock(nn.Module):
 
     
     def forward(self, x):
+        ''' I tried post norm, training look unstable let's try post norm '''
         temp = x # we need to store the original
-        att_out = self.attention(x)
+        att_out = self.attention(self.norm1(x))
         x = temp + att_out
-        x = self.norm1(x) # post norm
 
         # again storing second temp
         temp2 = x
-        mlp_out = self.mlp(x)
+        mlp_out = self.mlp(self.norm2(x))
         x = temp2 + mlp_out
-        x = self.norm2(x)
         return x
 
 class StackTransfomer(nn.Module):
@@ -183,7 +182,7 @@ class Main(nn.Module):
         optimizer slightly pulls every weight toward zero with weight_decay
         cause our model just memorized in one point leading to high accuracy.
         '''
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(self.parameters(), lr=3e-4)
 
         dataset = BatchLoader(train_data, block_size=self.block_size)
         dataloader = DataLoader(
