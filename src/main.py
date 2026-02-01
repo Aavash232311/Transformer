@@ -306,21 +306,24 @@ class Main(nn.Module):
 
     ''' Here we want to expriement with simple prompt '''
     def prompt(self, prompt):
+        self.eval()
         # this is the initial prompt!
-        prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
 
-        for i in range(0, self.generate_length):
-            embedding = self.embedding(prompt)
-            out =  self.block_transformer.forward(embedding)
-            logits = self.lm_head(out)
+        with torch.no_grad():
+            prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
 
-            indices = torch.argmax(logits, dim=-1)
-            decoded_indices = indices[0].tolist()
+            for i in range(0, self.generate_length):
 
-            if i == 0: # replce that in first iteration
-                prompt = decoded_indices
-            else:
-                prompt += decoded_indices # we add the result
+                idx_cond = prompt[:, -self.block_size:]  # we need to crop the prompt to block_size
+
+                embedding = self.embedding(idx_cond)
+                out = self.block_transformer.forward(embedding)
+
+                logits = self.lm_head(out[:, -1, :])
+
+                next_index = torch.argmax(logits, dim=-1, keepdim=True)
+
+                prompt = torch.cat((prompt, next_index), dim=1)
 
         return prompt
 
