@@ -8,8 +8,7 @@ I want to find some lib that does so, so that I don't have to write logic from s
 '''
 class BatchLoader(Dataset):
     def __init__(self, data, block_size):
-        print(type(data), type(block_size))
-        self.data = data  
+        self.data = data
         self.block_size = block_size
     
     def __len__(self):

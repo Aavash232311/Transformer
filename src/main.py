@@ -16,10 +16,13 @@ tokenizer = Tokenizer(text)
 
 print(f"Dataset characters: {len(text)}")
 
+# fast math for rtx 30 series
+torch.set_float32_matmul_precision('high')
+
 # Data Plumbing 
 split_data_index = int(len(text) * 0.9) 
-train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch.long)      
-val_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long)    
+train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch.long).to(device)   
+val_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long).to(device)    
 
 class MLP(nn.Module):
     def __init__(self, d_model):
@@ -187,9 +190,9 @@ class Main(nn.Module):
             dataset,
             batch_size=self.batch_size,
             shuffle=True,           
-            num_workers=2, 
+            num_workers=0, 
             drop_last=True,
-            pin_memory=True # speeds the trasnfer of data from DDR RAM to NVIDA gpu
+            pin_memory=False # load it directly on RTX Card
         )
 
         ''' In my case CPU might be a bottleneck,
@@ -202,6 +205,8 @@ class Main(nn.Module):
         print(f"Training for {num_epochs} epochs")
         print(f"Batches per epoch: {len(dataloader)}")
         print("-" * 60)
+
+        self.train()
 
         for epoch in range(num_epochs):
             epoch_loss = 0
