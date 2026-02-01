@@ -147,7 +147,7 @@ class Main(nn.Module):
         self.block_size = block_size
         self.device = device
         self.d_model = d_model
-        self.generate_length = 8
+        self.generate_length = generate_length
 
 
         self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device)
@@ -180,7 +180,7 @@ class Main(nn.Module):
         optimizer slightly pulls every weight toward zero with weight_decay
         cause our model just memorized in one point leading to high accuracy.
         '''
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001, weight_decay=0.1)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
 
         dataset = BatchLoader(train_data, block_size=self.block_size)
         dataloader = DataLoader(
@@ -286,7 +286,7 @@ class Main(nn.Module):
         all_targets = torch.cat(all_targets, dim=0)
 
         # for accuracy 
-        correct_mask = (all_predictions == all_predictions)
+        correct_mask = (all_predictions == all_targets) 
         accuracy = correct_mask.float().mean().item() * 100
 
         return average_loss, all_predictions, all_targets, accuracy
@@ -306,26 +306,33 @@ class Main(nn.Module):
 
     ''' Here we want to expriement with simple prompt '''
     def prompt(self, prompt):
-        self.eval()
-        # this is the initial prompt!
 
-        with torch.no_grad():
-            prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
+        prompt = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
 
-            for i in range(0, self.generate_length):
 
-                idx_cond = prompt[:, -self.block_size:]  # we need to crop the prompt to block_size
+        generated_indices = []
+        current_input = prompt
 
-                embedding = self.embedding(idx_cond)
-                out = self.block_transformer.forward(embedding)
+        for i in range(0, self.generate_length):
+            embedding = self.embedding(current_input)
+            out =  self.block_transformer.forward(embedding)
+            logits = self.lm_head(out)
 
-                logits = self.lm_head(out[:, -1, :])
+            next_token_logits = logits[:, -1, :]
 
-                next_index = torch.argmax(logits, dim=-1, keepdim=True)
+            next_token = torch.argmax(next_token_logits, dim=-1)
 
-                prompt = torch.cat((prompt, next_index), dim=1)
+            generated_indices.append(next_token.item())
 
-        return prompt
+            current_input = torch.cat([current_input, next_token.unsqueeze(0)], dim=1) 
+
+            if current_input.shape[1] > self.block_size:
+                current_input = current_input[:, -self.block_size:]
+        all_indices = torch.cat([
+            prompt[0], 
+            torch.tensor(generated_indices, device=device)
+        ]).tolist()
+        return all_indices
 
 transfomer = Main(batch_size=120, 
         block_size=128,
