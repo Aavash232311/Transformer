@@ -9,7 +9,7 @@ if torch.cuda.is_available():
     print(f"{torch.cuda.get_device_name(0)}")
     device = torch.device("cuda") 
 
-with open('data/alice.txt', 'r', encoding='utf-8') as f:
+with open('data/view.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
 tokenizer = Tokenizer(text)
@@ -189,9 +189,9 @@ class Main(nn.Module):
             dataset,
             batch_size=self.batch_size,
             shuffle=True,           
-            num_workers=0, 
             drop_last=True,
-            pin_memory=False # load it directly on RTX Card
+            num_workers=8,      
+            pin_memory=True
         )
 
         ''' In my case CPU might be a bottleneck,
@@ -322,7 +322,7 @@ class Main(nn.Module):
             out =  self.block_transformer.forward(embedding)
             logits = self.lm_head(out)
 
-            next_token_logits = logits[:, -1, :]
+            next_token_logits = logits[:, -1, :] # ignore everything except last array, case we want to predit the next one
 
             next_token = torch.argmax(next_token_logits, dim=-1)
 
@@ -331,6 +331,7 @@ class Main(nn.Module):
             current_input = torch.cat([current_input, next_token.unsqueeze(0)], dim=1) 
 
             if current_input.shape[1] > self.block_size:
+                # making sure we don't exceed the block size
                 current_input = current_input[:, -self.block_size:]
         all_indices = torch.cat([
             prompt[0], 
@@ -344,7 +345,7 @@ transfomer = Main(batch_size=120,
         d_model=256,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
 transfomer.run(train_data=train_data, val_data=val_data)
-output = transfomer.prompt("Alice")
+output = transfomer.prompt("for (let i in rootNode) {")
 print(tokenizer.decoder(output))
 
 total_params = sum(p.numel() for p in transfomer.parameters())
