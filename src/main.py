@@ -190,8 +190,6 @@ class Main(nn.Module):
             batch_size=self.batch_size,
             shuffle=True,           
             drop_last=True,
-            num_workers=8,      
-            pin_memory=True
         )
 
         ''' In my case CPU might be a bottleneck,
