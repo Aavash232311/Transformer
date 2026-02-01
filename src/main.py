@@ -9,7 +9,7 @@ if torch.cuda.is_available():
     print(f"{torch.cuda.get_device_name(0)}")
     device = torch.device("cuda") 
 
-with open('data/view.txt', 'r', encoding='utf-8') as f:
+with open('data/View.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
 tokenizer = Tokenizer(text)
