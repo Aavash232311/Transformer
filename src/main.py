@@ -37,7 +37,7 @@ class MLP(nn.Module):
 
 class MultiHead(nn.Module):
 
-    def __init__(self, dim, num_heads=12):
+    def __init__(self, dim, num_heads=8):
         super().__init__()
         self.key = nn.Linear(dim, dim) # it's learnable so using nn instead of matrix
         self.query = nn.Linear(dim, dim)
@@ -157,7 +157,7 @@ class Main(nn.Module):
             num_heads=8
         ).to(device=device) 
 
-
+        # we transfer to lm_head to turn the numbers into vocab predection!
         self.lm_head = nn.Linear(d_model, vocab_size) 
 
 
@@ -175,14 +175,18 @@ class Main(nn.Module):
         return res
     
     def training_custom(self, train_data, num_epochs=5):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+        '''
+        optimizer slightly pulls every weight toward zero with weight_decay
+        cause our model just memorized in one point leading to high accuracy.
+        '''
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.001, weight_decay=0.1)
 
         dataset = BatchLoader(train_data, block_size=self.block_size)
         dataloader = DataLoader(
             dataset,
             batch_size=self.batch_size,
             shuffle=True,           
-            num_workers=4, # 4 cpu core, in my current system hyperthreading is enabled so we could use 8, but there single core is stressed out
+            num_workers=2, 
             drop_last=True,
             pin_memory=True # speeds the trasnfer of data from DDR RAM to NVIDA gpu
         )
@@ -310,10 +314,10 @@ class Main(nn.Module):
         decoded_indices = indices[0].tolist()
         return decoded_indices
 
-transfomer = Main(batch_size=32, 
-        block_size=256,
+transfomer = Main(batch_size=120, 
+        block_size=128,
         device=device,
-        d_model=512,
+        d_model=256,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
 transfomer.run(train_data=train_data, val_data=val_data)
 output = transfomer.prompt("Alice")
