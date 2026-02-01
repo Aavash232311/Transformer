@@ -349,3 +349,4 @@ print(tokenizer.decoder(output))
 total_params = sum(p.numel() for p in transfomer.parameters())
 print(f"Total paramaters: {total_params:,}")
 
+# d_model vs accuracy graph while experimenthing with different d_model
