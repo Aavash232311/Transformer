@@ -294,13 +294,6 @@ class Main(nn.Module):
         return average_loss, all_predictions, all_targets, accuracy
             
     def run(self, train_data, val_data):
-        # prompt = torch.tensor(tokenizer.encode("Alice was beginning"), dtype=torch.long, device=device).unsqueeze(0)
-        # embedding = self.embedding(prompt)
-
-        # out =  self.block_transformer.forward(embedding)
-        # print(prompt.shape)
-
-
         self.training_custom(train_data=train_data)
         average_loss, all_predictions, all_targets, accuracy = self.evaulate(val_data)
         print(f"avg loss: {average_loss} accuracy: {accuracy} ")
