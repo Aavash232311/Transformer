@@ -3,6 +3,7 @@ import torch.nn as nn
 from tokenizer import Tokenizer
 from batch import BatchLoader
 from torch.utils.data import Dataset, DataLoader
+from test.embedding import SinusoidalPositionalEncoding
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
@@ -142,7 +143,7 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, pe_type="learned"):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
@@ -152,7 +153,7 @@ class Main(nn.Module):
         self.generate_length = generate_length
 
 
-        self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device)
+        self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device) if pe_type == "learned" else SinusoidalPositionalEncoding(d_model=512, max_len=5000)
         self.token_embedding_table = nn.Embedding(self.unique_characters, d_model, device=self.device)
 
         self.block_transformer = StackTransfomer(
