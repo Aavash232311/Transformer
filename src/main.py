@@ -143,7 +143,7 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, p_type="not-learned"):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, p_type="learned"):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
