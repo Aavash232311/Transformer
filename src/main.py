@@ -143,7 +143,7 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, pe_type="learned"):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, p_type="not-learned"):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
@@ -152,9 +152,15 @@ class Main(nn.Module):
         self.d_model = d_model
         self.generate_length = generate_length
 
-
-        self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device) if pe_type == "learned" else SinusoidalPositionalEncoding(d_model=512, max_len=5000)
         self.token_embedding_table = nn.Embedding(self.unique_characters, d_model, device=self.device)
+
+        if p_type == "learned":
+            self.positional_embedding_table = nn.Embedding(self.block_size, d_model, device=self.device)
+        else:
+            self.positional_embedding_table = SinusoidalPositionalEncoding(
+                d_model=d_model,
+                max_len=block_size
+            )
 
         self.block_transformer = StackTransfomer(
             d_model = d_model,

@@ -22,5 +22,5 @@ class SinusoidalPositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        seq_len = x.size(1)
-        return x + self.pe[:, :seq_len]
+        T = x.size(0)
+        return self.pe[:, :T].squeeze(0)
