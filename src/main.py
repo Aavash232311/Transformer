@@ -26,13 +26,12 @@ train_data = torch.tensor(tokenizer.encode(text[:split_data_index]), dtype=torch
 val_data = torch.tensor(tokenizer.encode(text[split_data_index:]), dtype=torch.long).to(device)    
 
 class MLP(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model, n_neurons=4):
         super().__init__()
-        self.p = 4
         self.net = nn.Sequential(
-            nn.Linear(d_model, self.p * d_model),
+            nn.Linear(d_model, n_neurons * d_model),
             nn.GELU(),
-            nn.Linear(self.p*d_model, d_model)
+            nn.Linear(n_neurons * d_model, d_model)
         )
 
     def forward(self, x): # x = output from attention block
