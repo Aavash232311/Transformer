@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from tokenizer import Tokenizer
@@ -142,7 +143,7 @@ class StackTransfomer(nn.Module):
         
 class Main(nn.Module):
 
-    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=512, p_type="learned"):
+    def __init__(self, batch_size, block_size, device, d_model, vocab_size, generate_length=1500, p_type="learned"):
         super().__init__()
         self.unique_characters = vocab_size
         self.batch_size = batch_size
@@ -336,15 +337,51 @@ class Main(nn.Module):
         ]).tolist()
         return all_indices
 
+
+checkpoint_dir = 'checkpoint'
+file_name = 'transfomer_v1.pth'
+full_path = os.path.join(checkpoint_dir, file_name)
+
+
+prompt_lm = True
+
+
 transfomer = Main(batch_size=120, 
         block_size=128,
         device=device,
         d_model=256,
         vocab_size=len(tokenizer.unique_characters())).to(device=device)
-transfomer.run(train_data=train_data, val_data=val_data)
-output = transfomer.prompt("for (let i in rootNode) {")
-print(tokenizer.decoder(output))
 
-total_params = sum(p.numel() for p in transfomer.parameters())
-print(f"Total paramaters: {total_params:,}")
+if prompt_lm == True:
+    "Let's keep this like a way to poke this LM,"
+    "Something what is more cool is to deply this"
+    "even though this is like dumb."
+    if os.path.exists(full_path):
+        state_dict = torch.load(full_path, map_location=device)
+        transfomer.load_state_dict(state_dict)
+        transfomer.eval()
+        prompt = str(input("Enter what you have to say: "))
+        out = transfomer.prompt(prompt=prompt)
+        print(tokenizer.decoder(out))
+else:
+    "Let's keep this like a train mode!"
+    transfomer.run(train_data=train_data, val_data=val_data)
+    output = transfomer.prompt("for (let i in rootNode) {")
+    print(tokenizer.decoder(output))
 
+    total_params = sum(p.numel() for p in transfomer.parameters())
+    print(f"Total paramaters: {total_params:,}")
+
+    '''
+        Let's save our trained params,
+        if we have saved let's try using this model to prompt something!
+    '''
+
+
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+        print(f"Created folder: {checkpoint_dir}")
+
+
+    torch.save(transfomer.state_dict(), full_path)
+    print(f"Saved successfully to {full_path}")
