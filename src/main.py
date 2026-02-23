@@ -1,22 +1,19 @@
 import os
 import torch
 import torch.nn as nn
-from tokenizer import Tokenizer
-from batch import BatchLoader
+from src.tokenizer import Tokenizer
+from src.batch import BatchLoader
 from torch.utils.data import Dataset, DataLoader
-from test.embedding import SinusoidalPositionalEncoding
+from src.test.embedding import SinusoidalPositionalEncoding
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
-    print(f"{torch.cuda.get_device_name(0)}")
-    device = torch.device("cuda") 
+    evice = torch.device("cuda") 
 
 with open('data/View.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
 tokenizer = Tokenizer(text)
-
-print(f"Dataset characters: {len(text)}")
 
 # fast math for rtx 30 series
 torch.set_float32_matmul_precision('high')
@@ -336,52 +333,52 @@ class Main(nn.Module):
             torch.tensor(generated_indices, device=device)
         ]).tolist()
         return all_indices
+    
+if __name__ == "__name__":
+    checkpoint_dir = 'checkpoint'
+    file_name = 'transfomer_v1.pth'
+    full_path = os.path.join(checkpoint_dir, file_name)
 
 
-checkpoint_dir = 'checkpoint'
-file_name = 'transfomer_v1.pth'
-full_path = os.path.join(checkpoint_dir, file_name)
+    prompt_lm = True
 
 
-prompt_lm = True
+    transfomer = Main(batch_size=120, 
+            block_size=128,
+            device=device,
+            d_model=256,
+            vocab_size=len(tokenizer.unique_characters())).to(device=device)
+
+    if prompt_lm == True:
+        "Let's keep this like a way to poke this LM,"
+        "Something what is more cool is to deply this"
+        "even though this is like dumb."
+        if os.path.exists(full_path):
+            state_dict = torch.load(full_path, map_location=device)
+            transfomer.load_state_dict(state_dict)
+            transfomer.eval()
+            prompt = str(input("Enter what you have to say: "))
+            out = transfomer.prompt(prompt=prompt)
+            print(tokenizer.decoder(out))
+    else:
+        "Let's keep this like a train mode!"
+        transfomer.run(train_data=train_data, val_data=val_data)
+        output = transfomer.prompt("for (let i in rootNode) {")
+        print(tokenizer.decoder(output))
+
+        total_params = sum(p.numel() for p in transfomer.parameters())
+        print(f"Total paramaters: {total_params:,}")
+
+        '''
+            Let's save our trained params,
+            if we have saved let's try using this model to prompt something!
+        '''
 
 
-transfomer = Main(batch_size=120, 
-        block_size=128,
-        device=device,
-        d_model=256,
-        vocab_size=len(tokenizer.unique_characters())).to(device=device)
-
-if prompt_lm == True:
-    "Let's keep this like a way to poke this LM,"
-    "Something what is more cool is to deply this"
-    "even though this is like dumb."
-    if os.path.exists(full_path):
-        state_dict = torch.load(full_path, map_location=device)
-        transfomer.load_state_dict(state_dict)
-        transfomer.eval()
-        prompt = str(input("Enter what you have to say: "))
-        out = transfomer.prompt(prompt=prompt)
-        print(tokenizer.decoder(out))
-else:
-    "Let's keep this like a train mode!"
-    transfomer.run(train_data=train_data, val_data=val_data)
-    output = transfomer.prompt("for (let i in rootNode) {")
-    print(tokenizer.decoder(output))
-
-    total_params = sum(p.numel() for p in transfomer.parameters())
-    print(f"Total paramaters: {total_params:,}")
-
-    '''
-        Let's save our trained params,
-        if we have saved let's try using this model to prompt something!
-    '''
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+            print(f"Created folder: {checkpoint_dir}")
 
 
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-        print(f"Created folder: {checkpoint_dir}")
-
-
-    torch.save(transfomer.state_dict(), full_path)
-    print(f"Saved successfully to {full_path}")
+        torch.save(transfomer.state_dict(), full_path)
+        print(f"Saved successfully to {full_path}")

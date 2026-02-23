@@ -20,3 +20,5 @@ dist/
 build/
 *.egg-info/
 
+# Ignore the specific client directory, download from different repo and paste it here
+client/

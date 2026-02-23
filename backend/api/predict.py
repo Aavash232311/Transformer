@@ -1,14 +1,13 @@
 from fastapi import FastAPI
 from fastapi.websockets import WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from src.main import * # LM
 
 app = FastAPI()
 
 
-@app.get("/")
-async def read_main(): # basic get end point
-    return {
-        "msg": "OPEN TCP"
-    }
+app.mount("/assets", StaticFiles(directory="client/dist/assets"), name="static")
 
 @app.websocket("/ws/llm")
 async def websocket_endpoint(websocket: WebSocket):
@@ -25,3 +24,11 @@ async def websocket_endpoint(websocket: WebSocket):
         print("Client disconnected or server reloaded.")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
+
+''' Point any request in this port to react '''
+@app.get("/{rest_of_path:path}")
+async def serve_react(rest_of_path: str):
+    return FileResponse("client/dist/index.html")
+
+# uvicorn backend.api.predict:app --reload
