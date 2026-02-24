@@ -8,7 +8,7 @@ from src.test.embedding import SinusoidalPositionalEncoding
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
-    evice = torch.device("cuda") 
+    device = torch.device("cuda") 
 
 with open('data/View.txt', 'r', encoding='utf-8') as f:
     text = f.read()
