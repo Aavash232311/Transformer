@@ -53,4 +53,7 @@ if os.path.exists(full_path):
 
 if __name__ == "__main__":
     lm_interface = InterFaceLM()
-    print(lm_interface.token_ping("retur"))
+    out = 're'
+    for i in range(0, 150):
+        out += lm_interface.token_ping(prompt=out)
+    print(out)
