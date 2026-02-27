@@ -46,7 +46,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 next_token = llm_interface.token_ping(current_input) 
                 await websocket.send_json({
                     "token": tokenizer.decoder([next_token.item()])
-                })
+                }) # this is not the effective way of send tokens? we will figure out what next;
                 current_input = torch.cat([current_input, next_token.unsqueeze(0)], dim=1) 
                 if current_input.shape[1] > BLOCK_SIZE:
                      # if exceeded then take the last of wharever the block_size is
