@@ -53,12 +53,12 @@ if os.path.exists(full_path):
 
 if __name__ == "__main__":
     lm_interface = InterFaceLM()
-    prompt = torch.tensor(tokenizer.encode("for"), dtype=torch.long, device=device).unsqueeze(0)
+    prompt = torch.tensor(tokenizer.encode("json"), dtype=torch.long, device=device).unsqueeze(0)
 
     current_input = prompt
     generated_tokens = []
 
-    for i in range(0, 150):
+    for i in range(0, 256):
         next_token = lm_interface.token_ping(current_input) 
         generated_tokens.append(next_token.item())
         current_input = torch.cat([current_input, next_token.unsqueeze(0)], dim=1) 
@@ -70,3 +70,5 @@ if __name__ == "__main__":
         prompt[0], 
         torch.tensor(generated_tokens, device=device)
     ]).tolist()
+
+    print(tokenizer.decoder(all_indices))
