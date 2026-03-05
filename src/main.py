@@ -248,12 +248,6 @@ class Main(nn.Module):
         self.eval()
         test_data = test_data.to(self.device)
 
-        total_loss = 0.0
-        total_samples = 0
-
-        # we need them ofc we do
-        all_predictions = []
-        all_targets = []
 
         # we need x, and y for cross entropy loss
         dataset = BatchLoader(test_data, block_size=self.block_size)
@@ -262,40 +256,21 @@ class Main(nn.Module):
         print(f"Total characters: {len(test_data)}")
 
         with torch.no_grad(): # no gradient calculation in testing 
-            for batch_idx, (x, y) in enumerate(test_loader):
+            total, correct = 0
+            for (x, y) in enumerate(test_loader):
                 x, y = x.to(self.device), y.to(self.device)
 
                 x = self.embedding(x)
                 x = self.block_transformer(x) # this is the forward pass, passes through all the blocks
                 
                 logits = self.lm_head(x) 
-                
-                loss = torch.nn.functional.cross_entropy(
-                    logits.view(-1, self.unique_characters), 
-                    y.view(-1)
-                )
+                pred = logits.argmax(dim=-1)
+                correct += (pred == y).sum().item()
+                total += y.numel()
 
-                batch_size = x.size(0)
-                total_loss += loss.item() * batch_size # last batch might be smaller than the others
-                total_samples += batch_size
-                
-                # get predictions
-                predictions = torch.argmax(logits, dim=-1)
-
-                all_predictions.append(predictions.cpu())
-                all_targets.append(y.cpu())
-
-
-        average_loss = total_loss / total_samples if total_samples > 0 else 0
-
-        all_predictions = torch.cat(all_predictions, dim=0)
-        all_targets = torch.cat(all_targets, dim=0)
-
-        # for accuracy 
-        correct_mask = (all_predictions == all_targets) 
-        accuracy = correct_mask.float().mean().item() * 100
-
-        return average_loss, all_predictions, all_targets, accuracy
+        accuracy = (correct / total) * 100
+        average_loss = 0
+        return average_loss, accuracy
             
     def run(self, train_data, val_data):
         self.training_custom(train_data=train_data)
