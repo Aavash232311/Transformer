@@ -275,7 +275,7 @@ class Main(nn.Module):
             
     def run(self, train_data, val_data):
         self.training_custom(train_data=train_data)
-        average_loss, all_predictions, all_targets, accuracy = self.evaulate(val_data)
+        average_loss, accuracy = self.evaulate(val_data)
         print(f"avg loss: {average_loss} accuracy: {accuracy} ")
         return 
 
