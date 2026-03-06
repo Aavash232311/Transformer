@@ -256,8 +256,9 @@ class Main(nn.Module):
         print(f"Total characters: {len(test_data)}")
 
         with torch.no_grad(): # no gradient calculation in testing 
-            total, correct = 0
-            for (x, y) in enumerate(test_loader):
+            total = 0
+            correct = 0
+            for i, (x, y) in enumerate(test_loader):
                 x, y = x.to(self.device), y.to(self.device)
 
                 x = self.embedding(x)
@@ -309,13 +310,15 @@ class Main(nn.Module):
         ]).tolist()
         return all_indices
     
+
+
+    
 if __name__ == "__name__":
     checkpoint_dir = 'checkpoint'
     file_name = 'transfomer_v1.pth'
     full_path = os.path.join(checkpoint_dir, file_name)
 
-
-    prompt_lm = True
+    prompt_lm = False
 
 
     transfomer = Main(batch_size=120, 
